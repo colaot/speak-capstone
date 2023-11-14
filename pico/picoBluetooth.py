@@ -68,8 +68,6 @@ class Switch():
             if not response == None:
                 return (self.num, direction.name, response)
     
-        
-    
 
 class BLESimplePeripheral:
     #Do not change the name. Appending any number stops the spk-pico from being
@@ -139,7 +137,6 @@ def demo():
                 p.send(str(response))
                 print(response)
                 previousResponse = response
-
 
 # sudo gatttool -i hci0 -b D8:3A:DD:44:B2:84 -I -t public
 if __name__ == "__main__":
