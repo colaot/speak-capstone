@@ -15,18 +15,45 @@ class MyDelegate(btle.DefaultDelegate):
 
         key, direction, state = self.parse_data(text)
 
-        if state == 'Pressed':
-            self.buffer.add((key, direction))
+        if state == 'Pressed' and not self.check_buffer_for_key(key, direction):
+            self.buffer.add((key, direction, state))
         elif state == 'Released':
-            if (key, direction) in self.buffer:
-                self.buffer.remove((key, direction))
+            if (key, direction, 'Pressed') in self.buffer:
+                self.buffer.discard(key, direction, 'Pressed')
+                self.buffer.add(key, direction, state)
 
         # Check all keys are released
-        if not self.buffer:
-            self.chords.append(text)
-            print("Stored chord: ", text)
+        if self.check_all_keys_released():
+            print("Clearing buffer . . .")
+            print("Buffer contains:")
+            print(self.buffer)
+            #above prints needs to be replaced with translate to chars
+            #and then from that into chords
             self.buffer.clear()
 
+    #checks if key (int) already exists in buffer
+    def check_buffer_for_key(self, key, dir):
+        for tuple in self.buffer:
+            #unpacks tuple
+            (buf_key, buf_dir, buf_state) = tuple
+            # case 1: key is same neither new or old are center: True
+            # case 2: key is same old is center, new is not: False
+            # case 3: key is same new is center, old is not: False
+            # case 4: key is same both center: True
+            # case 5: keys not the same: False
+            if buf_key == key:
+                if dir != 'Center' and buf_dir != 'Center':
+                    return True
+                if dir == 'Center' and buf_dir == 'Center':
+                    return True
+        return False
+
+    def check_all_keys_released(self):
+        for tuple in self.buffer:
+            (buf_key, buf_dir, buf_state) = tuple
+            if buf_state == 'Pressed':
+                return False
+        return True
 
     def parse_data(self, text):
         try:
