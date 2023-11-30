@@ -5,8 +5,8 @@ import csv
 class MyDelegate(btle.DefaultDelegate):
     def __init__(self):
         super().__init__()
-        self.buffer = set() # Buffer to store keys
-        self.chordmap = self.init_chords()
+        self.buffer = [] # Buffer to store keys
+        # self.chordmap = self.init_chords()
         self.chords = [] # Final chord array
 
 # Up, Right, Down, Left, Center :: 0, 1, 2, 3, 4
@@ -17,17 +17,15 @@ class MyDelegate(btle.DefaultDelegate):
         print("Received data: %s" % text)
 
         key, direction, state = self.parse_data(text)
-
         if state == 1 and not self.check_buffer_for_key(key, direction):
-            self.buffer.add((key, direction, state))
+            self.buffer.append((key, direction, state))
         elif state == 0:
             if (key, direction, 1) in self.buffer:
-                self.buffer.discard(key, direction, 1)
-                self.buffer.add(key, direction, state)
+                self.buffer.remove((key, direction, 1))
+                self.buffer.append((key, direction, state))
 
         # Check all keys are released
         if self.check_all_keys_released():
-
             print("Buffer contains:")
             print(self.buffer)
             print(self.translate_to_chars())
@@ -56,6 +54,8 @@ class MyDelegate(btle.DefaultDelegate):
         return False
 
     def check_all_keys_released(self):
+        if len(self.buffer) == 0:
+            return False
         for tuple in self.buffer:
             (buf_key, buf_dir, buf_state) = tuple
             if buf_state == 1:
@@ -71,29 +71,29 @@ class MyDelegate(btle.DefaultDelegate):
             (buf_key, buf_dir, buf_state) = tuple
             if (buf_dir != 4):
                 # if keystroke is not center press, check for corresponding center press
-                if center_press_in_buf(buf_key):
+                if self.center_press_in_buf(buf_key):
                     tuple_buf.append((buf_key, buf_dir, 1))
                 else:
                     tuple_buf.append((buf_key, buf_dir, 0))
             else:
                 # if keystroke is center press, check for corresponding non-center press
-                if not non_center_press_in_buf(buf_key):
+                if not self.non_center_press_in_buf(buf_key):
                     tuple_buf.append((buf_key, buf_dir, 0))
         for tuple in tuple_buf:
             char_buf.append(char_dict.get(tuple))
         return char_buf
 
-    def center_press_in_buf(key):
-        for tuple in self.buffer():
+    def center_press_in_buf(self, key):
+        for tuple in self.buffer:
             (buf_key, buf_dir, buf_state) = tuple
-            if (buf_dir == 4 and buf_key == key)
+            if (buf_dir == 4 and buf_key == key):
                 return True
         return False
 
-    def non_center_press_in_buf(key):
-            for tuple in self.buffer():
+    def non_center_press_in_buf(self, key):
+            for tuple in self.buffer:
                 (buf_key, buf_dir, buf_state) = tuple
-                if (buf_dir != 4 and buf_key == key)
+                if (buf_dir != 4 and buf_key == key):
                     return True
             return False
 
@@ -103,7 +103,7 @@ class MyDelegate(btle.DefaultDelegate):
             tuple = []
             chars = []
             for row in reader:
-                tuple.append((row["KEY"], row["DIRECTION"], row["CENTER"]))
+                tuple.append((int(row["KEY"]), int(row["DIRECTION"]), int(row["CENTER"])))
                 chars.append(row["CHAR"])
         return {tuple[i]:chars[i] for i in range(len(tuple))}
 
@@ -111,7 +111,7 @@ class MyDelegate(btle.DefaultDelegate):
     def parse_data(self, text):
         try:
             key, direction, state = text.strip('()').split(', ')
-            return key, direction, state
+            return int(key), int(direction), int(state)
         except ValueError:
             print("Invalid data format")
             return None, None, None
