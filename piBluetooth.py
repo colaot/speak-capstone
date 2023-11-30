@@ -6,7 +6,7 @@ class MyDelegate(btle.DefaultDelegate):
     def __init__(self):
         super().__init__()
         self.buffer = [] # Buffer to store keys
-        # self.chordmap = self.init_chords()
+        self.chordmap = self.init_chords()
         self.chords = [] # Final chord array
 
 # Up, Right, Down, Left, Center :: 0, 1, 2, 3, 4
@@ -14,7 +14,7 @@ class MyDelegate(btle.DefaultDelegate):
 
     def handleNotification(self, cHandle, data):
         text = bytes.fromhex(hexlify(data).decode()).decode('utf-8')
-        print("Received data: %s" % text)
+        # print("Received data: %s" % text)
 
         key, direction, state = self.parse_data(text)
         if state == 1 and not self.check_buffer_for_key(key, direction):
@@ -26,12 +26,13 @@ class MyDelegate(btle.DefaultDelegate):
 
         # Check all keys are released
         if self.check_all_keys_released():
-            print("Buffer contains:")
-            print(self.buffer)
-            print(self.translate_to_chars())
+            # print("Buffer contains:")
+            # print(self.buffer)
+            # print(self.translate_to_chars())
+            print(self.translate_to_chords(self.translate_to_chars()))
             #above prints needs to be replaced with translate to chars
             #and then from that into chords
-            print("Clearing buffer . . .")
+            # print("Clearing buffer . . .")
             self.buffer.clear()
 
     #checks if key (int) already exists in buffer
@@ -83,6 +84,18 @@ class MyDelegate(btle.DefaultDelegate):
             char_buf.append(char_dict.get(tuple))
         return char_buf
 
+    def translate_to_chords(self, char_buf):
+        output = ''
+        buffer_string = ''
+        for char in char_buf:
+            buffer_string += char
+        buffer_string = ''.join(sorted(buffer_string))
+        if buffer_string in self.chordmap:
+            output = self.chordmap.get(buffer_string)
+        else:
+            output = "Sorry, not a chord"
+        return output
+
     def center_press_in_buf(self, key):
         for tuple in self.buffer:
             (buf_key, buf_dir, buf_state) = tuple
@@ -116,24 +129,15 @@ class MyDelegate(btle.DefaultDelegate):
             print("Invalid data format")
             return None, None, None
 
-''' commented out for later development
-        if(text in self.chordmap) :
-            print(self.chordmap.get(text))
-        else:
-            print("Not a chord")
-
-
     def init_chords(self):
         with open('chords.csv', newline = '') as csvfile:
             reader = csv.DictReader(csvfile)
             keys = []
             vals = []
             for row in reader:
-                key.append(row["CHORD"])
-                key.append(row["WORD"])
+                keys.append(''.join(sorted(row["CHORD"])))
+                vals.append(row["WORD"])
         return {keys[i]:vals[i] for i in range (len(keys))}
-
-'''
 
 pico_mac_address = 'D8:3A:DD:44:B2:84'
 characteristic_uuid = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
@@ -145,7 +149,7 @@ try:
     while True:
         if p.waitForNotifications(1.0):
             continue
-        print("Waiting for notifications...")
+        # print("Waiting for notifications...")
 except btle.BTLEDisconnectError:
     print("The device has disconnected")
 except KeyboardInterrupt:
