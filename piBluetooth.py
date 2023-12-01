@@ -7,8 +7,8 @@ class MyDelegate(btle.DefaultDelegate):
         super().__init__()
         self.buffer = [] # Buffer to store keys
         self.chordmap = self.init_chords()
-        self.chords = [] # Final chord array
-
+        self.cum_words = "" # basically a buffer for chords entered, cleared upon enter keypress
+        self.chord_mode = 0 # mode of chordmap, 0 = auto, 1 = manual
 # Up, Right, Down, Left, Center :: 0, 1, 2, 3, 4
 # Pressed, Released :: 1, 0
 
@@ -18,7 +18,17 @@ class MyDelegate(btle.DefaultDelegate):
 
         key, direction, state = self.parse_data(text)
         if state == 1 and not self.check_buffer_for_key(key, direction):
-            self.buffer.append((key, direction, state))
+            if key == 3:
+                if direction == 0:
+                    print(self.cum_words)
+                    self.cum_words = ""
+                elif direction == 1:
+                    self.chord_mode = 0
+                elif direction == 3:
+                    self.chord_mode = 1
+                self.buffer.clear()
+            else:
+                self.buffer.append((key, direction, state))
         elif state == 0:
             if (key, direction, 1) in self.buffer:
                 self.buffer.remove((key, direction, 1))
@@ -29,7 +39,8 @@ class MyDelegate(btle.DefaultDelegate):
             # print("Buffer contains:")
             # print(self.buffer)
             # print(self.translate_to_chars())
-            print(self.translate_to_chords(self.translate_to_chars()))
+            str = self.translate_to_chords(self.translate_to_chars())
+            self.cum_words += str
             #above prints needs to be replaced with translate to chars
             #and then from that into chords
             # print("Clearing buffer . . .")
@@ -91,9 +102,9 @@ class MyDelegate(btle.DefaultDelegate):
             buffer_string += char
         buffer_string = ''.join(sorted(buffer_string))
         if buffer_string in self.chordmap:
-            output = self.chordmap.get(buffer_string)
+            output = self.chordmap.get(buffer_string[self.chord_mode])
         else:
-            output = "Sorry, not a chord"
+            output = "Sorry, not a chord" #this should be commented out
         return output
 
     def center_press_in_buf(self, key):
@@ -136,8 +147,11 @@ class MyDelegate(btle.DefaultDelegate):
             vals = []
             for row in reader:
                 keys.append(''.join(sorted(row["CHORD"])))
-                vals.append(row["WORD"])
+                vals.append(tuple((row["MAN"], row["AUTO"])))
         return {keys[i]:vals[i] for i in range (len(keys))}
+
+
+
 
 pico_mac_address = 'D8:3A:DD:44:B2:84'
 characteristic_uuid = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
